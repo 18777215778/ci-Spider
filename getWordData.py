@@ -64,7 +64,7 @@ class Base(object):
 
             # 无效 URL
             except requests.exceptions.MissingSchema:
-                print("{} 无效 URL：{}".format(kwargs["headers"]["Host"], kwargs["url"]))
+                print("Host：{} 无效 URL：{}".format(kwargs["headers"]["Host"], kwargs["url"]))
                 break
 
             # 请求超时集合

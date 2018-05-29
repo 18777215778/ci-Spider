@@ -2,6 +2,7 @@ from getWordData import start
 import os, threading, queue, time, os, hashlib
 from saveToMongoDB import MongoDB
 from multiprocessing import Process, Queue, freeze_support
+import multiprocessing
 
 
 def createAudioPath():
@@ -191,7 +192,7 @@ def mainContrl():
     mulPool = []
 
     # 创建进程池
-    for i in range(2):
+    for i in range(6):
         mulPool.append(Process(target = start, args = (wl_queue, wd_queue, )))
         mulPool[i].daemon = True
         mulPool[i].start()
