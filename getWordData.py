@@ -117,29 +117,26 @@ class Base(object):
         print("获取音频失败 {}".format(url))
         return False
 
-    def addEle(self, word, str):
+    def addEle(self, word, sent):
         '''
         找出例句中的当前单词，并标记出来
         :param word: 当前单词
-        :param str: 例句
+        :param sent: 例句
         :return: 标记后的例句
         '''
-        wordArr = [word.lower(), word.upper(), word.title()]
+        word_arr = [word.lower(), word.upper(), word.title()]
+        matched_patten = {" {} ": " <mark>{}</mark> ", "{} ": "<mark>{}</mark> ", " {}": " <mark>{}</mark>"}
+        try:
+            sent = re.findall("(^.+)", sent)[0]
+        except:
+            return sent
 
-        for w in wordArr:
-            if " {} ".format(w) in str:
-                str = str.replace(" {} ".format(w), " <mark>{}</mark> ".format(w))
-                break
-
-            elif "{} ".format(w) in str:
-                str = str.replace("{} ".format(w), "<mark>{}</mark> ".format(w))
-                break
-
-            elif " {}".format(w) in str:
-                str = str.replace(" {}".format(w), " <mark>{}</mark>".format(w))
-                break
-
-        return str
+        for m in matched_patten:
+            for w in word_arr:
+                if m.format(w) in sent:
+                    sent = sent.replace(m.format(w), matched_patten[m].format(w))
+                    return sent
+        return sent
 
     def drawPrototype(self, wd, str):
         '''
@@ -1249,6 +1246,7 @@ def start(wl_queue, wd_queue):
         except TypeError:
             pass
 
+    pool_num = 0
     while not wl_queue.empty():
         wd.word["word"] = wl_queue.get(timeout=10)
         # 从数据库查询单词是否已收录
@@ -1266,6 +1264,11 @@ def start(wl_queue, wd_queue):
         gevent.joinall([gevent.spawn(dict.running) for dict in allDict[1:]])
         wd_queue.put(wd.word)
         wd.__init__()
+
+        if pool_num < 20:
+            pool_num += 1
+        else:
+            time.sleep(120)
 
 
 # 整体测试

@@ -138,7 +138,7 @@ def dbHandler(wl_queue, wd_queue):
     db = MongoDB()
     while True:
         try:
-            word_data = wd_queue.get(timeout=60)
+            word_data = wd_queue.get(timeout=180)
 
         except queue.Empty:
             print("\n队列中的所有单词的数据抓取完毕")
@@ -189,17 +189,16 @@ def mainContrl():
     wl_queue = readWordFromfiler()
     wd_queue = Queue()
     createAudioPath()
-    mulPool = []
-
-    # 创建进程池
-    for i in range(6):
-        mulPool.append(Process(target = start, args = (wl_queue, wd_queue, )))
-        mulPool[i].daemon = True
-        mulPool[i].start()
 
     # 创建并启动 save() 线程
-    save_thread = threading.Thread(target=dbHandler, args=(wl_queue, wd_queue, ))
+    save_thread = threading.Thread(target=dbHandler, args=(wl_queue, wd_queue,))
     save_thread.start()
+
+    # 创建进程池
+    for i in range(3):
+        mul = Process(target = start, args = (wl_queue, wd_queue, ))
+        mul.daemon = True
+        mul.start()
 
     # 等待
     save_thread.join()
