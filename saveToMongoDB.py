@@ -6,13 +6,13 @@ class MongoDB():
     def __init__(self):
         self.client = MongoClient("127.0.0.1", 27017)
         self.db = self.client["ciPanGuan"]
-        self.word_info = self.db.word_data
+        self.word_data = self.db.word_data
 
     # 添加数据
     def add_one(self, d):
         d["lastTime"] = datetime.now()
         try:
-            self.word_info.insert_one(d)
+            self.word_data.insert_one(d)
             return True
         except:
             print("{} 保存失败!".format(d["word"]))
@@ -20,7 +20,7 @@ class MongoDB():
 
     # 确定单词是否已收录到数据库
     def sureBe(self, word):
-        rest = self.word_info.find_one({"word": word}, {"word": True})
+        rest = self.word_data.find_one({"word": word}, {"word": True})
 
         if rest:
             return True
@@ -31,7 +31,7 @@ class MongoDB():
     def getDefWord(self, word):
         rest = None
         try:
-            rest = self.word_info.find_one({"word":"{}".format(word), "defWord":{"$ne":{}}}, {'_id': False,"defWord":True})
+            rest = self.word_data.find_one({"word":"{}".format(word), "defWord":{"$ne":{}}}, {'_id': False,"defWord":True})
         except:
             pass
 
@@ -49,7 +49,7 @@ class MongoDB():
     def getOriWord(self, word):
         rest = None
         try:
-            rest = self.word_info.find_one({"word": "{}".format(word), "oriWord": {"$ne": {}}}, {'_id': False, "oriWord": True})
+            rest = self.word_data.find_one({"word": "{}".format(word), "oriWord": {"$ne": {}}}, {'_id': False, "oriWord": True})
         except:
             pass
 

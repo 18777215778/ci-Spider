@@ -35,6 +35,17 @@ class WordData(object):
             "affixes": []  # 词根
         }
 
+    def get(self):
+        '''
+        对空值 {} [] "" 全都使用 None 覆盖
+        :return:
+        '''
+        for k in self.word:
+            if not self.word[k]:
+                self.word[k] = None
+
+        return self.word
+
 
 # 所有字典对象的基类
 class Base(object):
@@ -1262,7 +1273,7 @@ def start(wl_queue, wd_queue):
             continue
 
         gevent.joinall([gevent.spawn(dict.running) for dict in allDict[1:]])
-        wd_queue.put(wd.word)
+        wd_queue.put(wd.get())
         wd.__init__()
 
         if pool_num < 20:
