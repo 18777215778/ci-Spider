@@ -1,7 +1,7 @@
 from getWordData import start
-import os, threading, queue, time, os, hashlib
+import threading, queue, time, os, hashlib
 from saveToMongoDB import MongoDB
-from multiprocessing import Process, Queue, freeze_support
+from multiprocessing import Process, Queue, freeze_support, Queue
 import multiprocessing
 
 
@@ -74,60 +74,63 @@ def printBearFruit(wd):
         # 单词
         m.append(wd["word"])
         # 音节
-        if wd["syll"]:
-            m.append("有")
-        else:
-            m.append("无")
+        m.append("有") if wd["syll"] else m.append("无")
         # 英标
-        if wd["symbolUK"]:
-            m.append(wd["symbolUK"])
-        else:
-            m.append("无")
+        m.append(wd["symbolUK"]) if wd["symbolUK"] else m.append("无")
         # 美标
-        if wd["symbolUS"]:
-            m.append(wd["symbolUS"])
-        else:
-            m.append("无")
+        m.append(wd["symbolUS"]) if wd["symbolUS"] else m.append("无")
         # 英音
-        m.append(len(wd["proUK"]))
+        m.append(len(wd["proUK"])) if wd["proUK"] else m.append("0")
         # 美英
-        m.append(len(wd["proUS"]))
+        m.append(len(wd["proUS"])) if wd["proUS"] else m.append("0")
         # 变形
-        m.append(len(wd["defWord"]))
+        m.append(len(wd["defWord"])) if wd["defWord"] else m.append("0")
         # 原形
-        if wd["oriWord"]:
-            m.append(wd["oriWord"])
-        else:
-            m.append(wd["word"])
+        m.append(wd["oriWord"]) if wd["oriWord"] else m.append("无")
         # 中释
-        m.append(len(wd["paraZh"]))
+        m.append(len(wd["paraZh"])) if wd["paraZh"] else m.append("0")
         # 英释
-        m.append(len(wd["paraEn"]))
+        m.append(len(wd["paraEn"])) if wd["paraEn"] else m.append("0")
         # 中文细释
-        m.append(len(wd["detParaZh"]))
+        m.append(len(wd["detParaZh"])) if wd["detParaZh"] else m.append("0")
         # 短语
-        m.append(len(wd["phrase"]))
+        m.append(len(wd["phrase"])) if wd["phrase"] else m.append("无")
         # 高频释义
-        if wd["highFrePara"]:
-            m.append("有")
-        else:
-            m.append("无")
+        m.append("有") if wd["highFrePara"] else m.append("无")
         # 高频词性
-        if wd["highFreProp"]:
-            m.append("有")
-        else:
-            m.append("无")
+        m.append("有") if wd["highFreProp"] else m.append("无")
         # 双语例句
-        m.append(len(wd["sentDB"]))
+        m.append(len(wd["sentDB"])) if wd["sentDB"] else m.append("0")
         # 英文例句
-        m.append(len(wd["sentEn"]))
+        m.append(len(wd["sentEn"])) if wd["sentEn"] else m.append("0")
         # 近义词
-        m.append(len(wd["synonym"]))
+        m.append(len(wd["synonym"])) if wd["synonym"] else m.append("0")
         # 反义词
-        m.append(len(wd["antonym"]))
+        m.append(len(wd["antonym"])) if wd["antonym"] else m.append("0")
         # 词根
-        m.append(len(wd["affixes"]))
+        m.append(len(wd["affixes"])) if wd["affixes"] else m.append("0")
         print(mess.format(*m), end="\n")
+
+
+def collateData(data):
+    keys = []
+
+    if (isinstance(data, list)):
+        keys = range(len(data))
+
+    if (isinstance(data, dict)):
+        keys = data.keys()
+
+    for i in keys:
+        if data[i] == {}:
+            data[i] = None
+        else:
+            data[i] = collateData(data[i])
+
+    if data == "" or data == [] or data == {}:
+        data = None
+
+    return data
 
 
 def dbHandler(wl_queue, wd_queue):
@@ -154,28 +157,29 @@ def dbHandler(wl_queue, wd_queue):
             word_data["syll"] = word_data["word"]
 
         # 保存单词单词发音音频
-        for key in ["proUK", "proUS"]:
-            del_count = 0
-            audios = word_data[key]
-            for index, audio in enumerate(audios):
-                file_name = saveAudioToDisc(audio)
-                if file_name:
-                    word_data[key][index] = file_name
-                else:
-                    del word_data[index-del_count]
-                    del_count += 1
+        # for key in ["proUK", "proUS"]:
+        #     del_count = 0
+        #     audios = word_data[key]
+        #     for index, audio in enumerate(audios):
+        #         file_name = saveAudioToDisc(audio)
+        #         if file_name:
+        #             word_data[key][index] = file_name
+        #         else:
+        #             del word_data[index-del_count]
+        #             del_count += 1
 
         # 获得单词的原形，并添加到队列
         if word_data["oriWord"] and (not db.sureBe(word_data["oriWord"])):
             wl_queue.put(word_data["oriWord"])
 
         # 获取单词的变形，并添加到队列
-        for w in list(word_data["defWord"].values()):
-            if not db.sureBe(w):
-                wl_queue.put(w)
+        if word_data["defWord"]:
+            for w in list(word_data["defWord"].values()):
+                if not db.sureBe(w):
+                    wl_queue.put(w)
 
         # 保存到数据库
-        if db.add_one(word_data):
+        if db.add_one(collateData(word_data)):
             # 打印结果
             printBearFruit(word_data)
             print("剩余 {} 个单词".format(wl_queue.qsize()))

@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from urllib import parse
 from fake_useragent import UserAgent
 from saveToMongoDB import MongoDB
-import requests, lxml, re, json, time, base64, gevent, hashlib, os
+import requests, lxml, re, json, time, base64, gevent, hashlib, os, filetype
 
 
 class WordData(object):
@@ -36,14 +36,8 @@ class WordData(object):
         }
 
     def get(self):
-        '''
-        对空值 {} [] "" 全都使用 None 覆盖
-        :return:
-        '''
-        for k in self.word:
-            if not self.word[k]:
-                self.word[k] = None
-
+        if not self.word["syll"]:
+            self.word["syll"] = [self.word["word"]]
         return self.word
 
 
@@ -115,15 +109,17 @@ class Base(object):
         for i in range(1, 4):
             headers["User-Agent"] = UserAgent().random
             try:
-                mp3 = requests.get(url=url, headers=headers, timeout=3, allow_redirects=False)
-
+                audio = requests.get(url=url, headers=headers, timeout=10, allow_redirects=False)
             except  (requests.exceptions.Timeout,
                     requests.exceptions.ConnectTimeout,
                     requests.exceptions.ReadTimeout,
                     requests.exceptions.ConnectionError):
                     pass
             else:
-                return mp3.content
+                # 转换成base64
+                return base64.b64encode(audio.content).decode()
+                # 保存到磁盘
+                # return mp3.content
 
         print("获取音频失败 {}".format(url))
         return False
@@ -208,7 +204,7 @@ class XiaoD(Base):
         self.soup = None
 
     # 获取页面的 HTML, 同时承担单词是否正确的验证
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -224,11 +220,11 @@ class XiaoD(Base):
         if not word: return False
         word = word.get_text(strip=True)
         wls = [word.lower(), word.upper(), word.title()]
-        for w in wls:
-            if w == self.wd.word["word"]:
-                return True
+        if (self.wd.word["word"] in wls):
+            return True
         else:
             return False
+
 
     # 获取英式音标
     def getSymbolUK_ANA(self):
@@ -270,7 +266,7 @@ class XiaoD(Base):
                 wProp = wProp.get_text(strip=True).replace(".", "")
 
             wPara = i.select_one("span.simple-definition").get_text(strip=True)
-            self.wd.word["paraZh"][wProp] = wPara
+            # self.wd.word["paraZh"][wProp] = wPara
 
             # 检测释义中是否包含单词原形
             self.drawPrototype(self.wd, wPara)
@@ -300,6 +296,7 @@ class XiaoD(Base):
                 # 对不同释义下的例句分解
                 itmePara["lj"] = []
                 for phrase in ddEle.select("ul > li"):
+                    if len(list(phrase.stripped_strings)) != 2: continue
                     pEn, pZh = list(phrase.stripped_strings)
                     pEn = self.addEle(self.wd.word["word"], pEn)
                     itmePara["lj"].append([pEn, pZh])
@@ -348,7 +345,9 @@ class XiaoD(Base):
 
         for li in ol:
             phrase = list(li.stripped_strings)
-            self.wd.word["phrase"].append(phrase)
+            en = phrase[0]
+            zh = phrase[1]
+            self.wd.word["phrase"].append([self.addEle(self.wd.word["word"], en), zh])
 
         return True
 
@@ -386,7 +385,7 @@ class BingDict(Base):
         self.soup = None
 
     # 获取页面的 HTML
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -472,6 +471,16 @@ class Iciba(Base):
             return True
         else:
             return False
+
+    # 获取中文释义
+    def getParaZh_ANA(self):
+        parts = self.json["baesInfo"]["symbols"][0]["parts"]
+        for i in parts:
+            part = i["part"].replace(".", "")
+            means = "；".join(i["means"])
+            self.wd.word["paraZh"][part] = means
+            # 检测释义中是否包含单词原形
+            self.drawPrototype(self.wd, part)
 
     # 获取英式音标
     def getSymbolUK_ANA(self):
@@ -652,7 +661,7 @@ class HaiCi(Base):
         self.soup = None
 
     # 获取页面
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -808,7 +817,7 @@ class Youdao(Base):
         self.soup = None
 
     # 获取页面
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -828,7 +837,9 @@ class Youdao(Base):
 
         for item in pList:
             phrase = list(item.stripped_strings)
-            self.wd.word["phrase"].append([p.replace("\t","").replace("\n","").replace("\r","") for p in phrase])
+            en = phrase[0].replace("\t","").replace("\n","").replace("\r","")
+            zh = phrase[1].replace("\t","").replace("\n","").replace("\r","")
+            self.wd.word["phrase"].append([self.addEle(self.wd.word["word"], en), zh])
 
         return True
 
@@ -921,7 +932,7 @@ class FreeDict(Base):
             "req_count": 0,
             "session": requests.session(),
             "url": "",
-            "timeout": 5,
+            "timeout": 10,
             "headers": {
                 "Host": "www.thefreedictionary.com",
                 "Referer": "http://www.thefreedictionary.com"
@@ -931,7 +942,7 @@ class FreeDict(Base):
         self.soup = None
 
     # 获取页面
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -1011,7 +1022,7 @@ class Oxford(Base):
             "req_count": 0,
             "session": requests.session(),
             "url": "",
-            "timeout": 5,
+            "timeout": 10,
             "headers" :{
                 "Host": "www.oxfordlearnersdictionaries.com",
                 "Connection": "Close",
@@ -1022,7 +1033,7 @@ class Oxford(Base):
         self.soup = None
 
     # 获取页面
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -1092,7 +1103,7 @@ class Collins(Base):
             "req_count": 0,
             "session": requests.session(),
             "url": "",
-            "timeout": 5,
+            "timeout": 10,
             "headers":{
                 "Host": "www.collinsdictionary.com",
                 "Connection": "Close",
@@ -1103,7 +1114,7 @@ class Collins(Base):
         self.soup = None
 
     # 获取页面
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -1177,7 +1188,7 @@ class MerriamWebster(Base):
             "req_count":0,
             "session": requests.session(),
             "url": "",
-            "timeout": 5,
+            "timeout": 10,
             "headers": {
                 "Host": "www.merriam-webster.com",
                 "Connection": "Close",
@@ -1188,7 +1199,7 @@ class MerriamWebster(Base):
         self.soup = None
 
     # 获取页面
-    def getPageHTML_REQ(self):
+    def getHTMLPage_REQ(self):
 
         self.requests["url"] = self.url_templet.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
@@ -1268,8 +1279,8 @@ def start(wl_queue, wd_queue):
         # 以沪江小D词典为准，判断单词是否存在或符合抓取标准
         if not allDict[0].running():
             print("\033[31m{} 可能不存在或不符合抓取标准\033[0m".format(wd.word["word"]))
-            wd.word["full"] = False
-            wd_queue.put(wd.word)
+            # wd.word["full"] = False
+            # wd_queue.put(wd.word)
             continue
 
         gevent.joinall([gevent.spawn(dict.running) for dict in allDict[1:]])
@@ -1316,12 +1327,12 @@ def fullTest(wordlist):
 # 单元测试
 def unitTest(wordlist):
     wd = WordData()
-    example = Oxford(wd)
+    example = Iciba(wd)
 
     for w in wordlist:
         wd.word["word"] = w
         example.running()
-        print(wd.word["sentEn"])
+        # print(wd.word["sentEn"])
         wd.__init__()
 
 
