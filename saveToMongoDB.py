@@ -35,7 +35,7 @@ class MongoDB():
         except:
             pass
 
-        if not rest: return []
+        if not rest["defWord"]: return []
 
         # 过滤掉数据库中已收录的单词
         wls = []
@@ -54,7 +54,7 @@ class MongoDB():
             pass
 
         # 过滤掉数据库中已收录的单词
-        if rest and (not self.sureBe(rest)):
+        if rest["oriWord"] and (not self.sureBe(rest)):
             return [rest["oriWord"]]
         else:
             return []

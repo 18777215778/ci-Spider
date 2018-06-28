@@ -58,6 +58,8 @@ class Base(object):
             if kwargs["req_count"] > 10:
                 kwargs["session"].clear()
                 kwargs["req_count"] = 0
+            else:
+                kwargs["req_count"] += 1
 
             # 开始发起请求
             try:
@@ -96,7 +98,6 @@ class Base(object):
                     return False
 
         else:
-
             return False
 
     def downloadAudio(self, url, headers):
@@ -187,7 +188,7 @@ class XiaoD(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "https://dict.hjenglish.com/w/{}"
+        self.url_template = "https://dict.hjenglish.com/w/{}"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -206,7 +207,7 @@ class XiaoD(Base):
     # 获取页面的 HTML, 同时承担单词是否正确的验证
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if not html: return False
@@ -224,7 +225,6 @@ class XiaoD(Base):
             return True
         else:
             return False
-
 
     # 获取英式音标
     def getSymbolUK_ANA(self):
@@ -368,7 +368,7 @@ class BingDict(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "http://cn.bing.com/dict/search?q={}"
+        self.url_template = "http://cn.bing.com/dict/search?q={}"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -387,7 +387,7 @@ class BingDict(Base):
     # 获取页面的 HTML
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if not html: return False
@@ -442,7 +442,7 @@ class Iciba(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "http://www.iciba.com/index.php?a=getWordMean&c=search&list=1,2,3,4,5,8,9,10,12,13,14,15,18,21,22,24,3003,3004,3005&word={}"
+        self.url_template = "http://www.iciba.com/index.php?a=getWordMean&c=search&list=1,2,3,4,5,8,9,10,12,13,14,15,18,21,22,24,3003,3004,3005&word={}"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -460,7 +460,7 @@ class Iciba(Base):
     # 获取json数据
     def getJson_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         rej = self.getHTML(**self.requests)
 
         if not rej: return False
@@ -644,7 +644,7 @@ class HaiCi(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "http://www.dict.cn/{}"
+        self.url_template = "http://www.dict.cn/{}"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -663,7 +663,7 @@ class HaiCi(Base):
     # 获取页面
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if html:
@@ -800,7 +800,7 @@ class Youdao(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "http://dict.youdao.com/w/eng/{}/#keyfrom=dict2.index"
+        self.url_template = "http://dict.youdao.com/w/eng/{}/#keyfrom=dict2.index"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -819,7 +819,7 @@ class Youdao(Base):
     # 获取页面
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if html:
@@ -869,7 +869,7 @@ class Jukuu(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "http://www.jukuu.com/show-{}-{}.html"
+        self.url_template = "http://www.jukuu.com/show-{}-{}.html"
         self.requests = {
             "msg": False,
             "req_count": 0,
@@ -889,7 +889,7 @@ class Jukuu(Base):
         count = 0
         page = 0
         while True:
-            self.requests["url"] = self.url_templet.format(self.wd.word["word"], page)
+            self.requests["url"] = self.url_template.format(self.wd.word["word"], page)
             html = self.getHTML(**self.requests)
 
             if not html: break
@@ -926,7 +926,7 @@ class FreeDict(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "http://www.thefreedictionary.com/{}"
+        self.url_template = "http://www.thefreedictionary.com/{}"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -944,7 +944,7 @@ class FreeDict(Base):
     # 获取页面
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if html:
@@ -1016,7 +1016,7 @@ class Oxford(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "https://www.oxfordlearnersdictionaries.com/definition/english/{}"
+        self.url_template = "https://www.oxfordlearnersdictionaries.com/definition/english/{}"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -1035,7 +1035,7 @@ class Oxford(Base):
     # 获取页面
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if html:
@@ -1097,7 +1097,7 @@ class Collins(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "https://www.collinsdictionary.com/zh/dictionary/english/{}"
+        self.url_template = "https://www.collinsdictionary.com/zh/dictionary/english/{}"
         self.requests = {
             "msg": True,
             "req_count": 0,
@@ -1116,7 +1116,7 @@ class Collins(Base):
     # 获取页面
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if html:
@@ -1182,7 +1182,7 @@ class MerriamWebster(Base):
         self.wd = wd
         self.func = [f for f in self.__dir__() if ("_REQ" in f) or ("_ANA" in f)]
 
-        self.url_templet = "https://www.merriam-webster.com/dictionary/{}"
+        self.url_template = "https://www.merriam-webster.com/dictionary/{}"
         self.requests = {
             "msg": True,
             "req_count":0,
@@ -1201,7 +1201,7 @@ class MerriamWebster(Base):
     # 获取页面
     def getHTMLPage_REQ(self):
 
-        self.requests["url"] = self.url_templet.format(self.wd.word["word"])
+        self.requests["url"] = self.url_template.format(self.wd.word["word"])
         html = self.getHTML(**self.requests)
 
         if html:
@@ -1271,9 +1271,17 @@ def start(wl_queue, wd_queue):
     pool_num = 0
     while not wl_queue.empty():
         wd.word["word"] = wl_queue.get(timeout=10)
+
         # 从数据库查询单词是否已收录
         if db.sureBe(wd.word["word"]):
             print("\033[32m{} 已收录\033[0m".format(wd.word["word"]))
+
+            # words = db.getDefWord(wd.word["word"])
+            # words.extend(db.getOriWord(wd.word["word"]))
+            # for w in words:
+            #     if w.isalpha():
+            #         wl_queue.put(w)
+
             continue
 
         # 以沪江小D词典为准，判断单词是否存在或符合抓取标准

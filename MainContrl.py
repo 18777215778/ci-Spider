@@ -1,7 +1,7 @@
 from getWordData import start
-import threading, queue, time, os, hashlib
+import threading, time, os, hashlib
 from saveToMongoDB import MongoDB
-from multiprocessing import Process, Queue, freeze_support, Queue
+from multiprocessing import Process, JoinableQueue, freeze_support
 import multiprocessing
 
 
@@ -48,7 +48,7 @@ def readWordFromfiler():
     从文件读取单词到队列
     :return: 单词队列
     '''
-    word_queue = Queue()
+    word_queue = JoinableQueue()
     for path in os.listdir("./"):
 
         if ".txt" not in path:
@@ -140,12 +140,8 @@ def dbHandler(wl_queue, wd_queue):
     '''
     db = MongoDB()
     while True:
-        try:
-            word_data = wd_queue.get(timeout=180)
 
-        except queue.Empty:
-            print("\n队列中的所有单词的数据抓取完毕")
-            return True
+        word_data = wd_queue.get()
 
         # 保存不完整的单词数据
         if ("full" in word_data) and (not word_data["full"]):
@@ -191,11 +187,12 @@ def mainContrl():
     :return: None
     '''
     wl_queue = readWordFromfiler()
-    wd_queue = Queue()
+    wd_queue = JoinableQueue()
     createAudioPath()
 
     # 创建并启动 save() 线程
     save_thread = threading.Thread(target=dbHandler, args=(wl_queue, wd_queue,))
+    save_thread.setDaemon(True)
     save_thread.start()
 
     # 创建进程池
@@ -205,8 +202,11 @@ def mainContrl():
         mul.start()
 
     # 等待
+    wl_queue.join()
+    wl_queue.join()
     save_thread.join()
 
+    print("\n队列中的所有单词的数据抓取完毕")
 
 if __name__ == '__main__':
     mainContrl()
